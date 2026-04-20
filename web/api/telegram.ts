@@ -894,14 +894,7 @@ function parseTransaction(text: string): ParsedTransaction | null {
   let amount: number | null = null;
   let amountIdxs: number[] = [];
   for (let i = 0; i < remaining.length; i++) {
-    // Try single token first: "35k", "2tr", "50000"
-    const p = parseAmount(remaining[i]);
-    if (p !== null) {
-      amount = p;
-      amountIdxs = [i];
-      break;
-    }
-    // Try two tokens: "2 triệu", "500 nghìn", "1.5 tr"
+    // Try two tokens FIRST: "2 triệu", "500 nghìn", "1.5 tr"
     if (i + 1 < remaining.length) {
       const combined = remaining[i] + remaining[i + 1];
       const p2 = parseAmount(combined);
@@ -910,6 +903,13 @@ function parseTransaction(text: string): ParsedTransaction | null {
         amountIdxs = [i, i + 1];
         break;
       }
+    }
+    // Then try single token: "35k", "2tr", "50000"
+    const p = parseAmount(remaining[i]);
+    if (p !== null) {
+      amount = p;
+      amountIdxs = [i];
+      break;
     }
   }
   if (amount === null) return null;
