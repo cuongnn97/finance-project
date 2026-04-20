@@ -1149,6 +1149,42 @@ bot.command("help", async (ctx: Context) => {
   );
 });
 
+async function deleteLastTransaction(
+  userId: string,
+): Promise<Transaction | null> {
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error || !data) return null;
+
+  const tx = data as Transaction;
+  const { error: delError } = await supabase
+    .from("transactions")
+    .delete()
+    .eq("id", tx.id);
+
+  if (delError) return null;
+  return tx;
+}
+
+const DELETE_PATTERNS = [
+  /xo[áa].*(?:bản ghi|giao dịch).*(?:trước|vừa|cuối|gần|mới)/i,
+  /xo[áa].*(?:bản ghi|giao dịch).*(?:rồi|đó|kia)/i,
+  /(?:bỏ|huỷ|hủy|xóa|xoá).*(?:cái|bản|giao dịch).*(?:vừa|trước|cuối|gần|mới|rồi|đó)/i,
+  /(?:undo|hoàn tác|bỏ đi)/i,
+  /xo[áa]\s*(?:đi|nó|luôn)/i,
+  /(?:delete|remove).*(?:last|previous|recent)/i,
+];
+
+function isDeleteCommand(text: string): boolean {
+  return DELETE_PATTERNS.some((p) => p.test(text));
+}
+
 // Free-text messages
 bot.on("text", async (ctx: Context) => {
   const message = ctx.message;
@@ -1163,6 +1199,26 @@ bot.on("text", async (ctx: Context) => {
     return;
   }
 
+  // ── Xử lý lệnh xóa ──
+  if (isDeleteCommand(text)) {
+    const deleted = await deleteLastTransaction(profile.id);
+    if (!deleted) {
+      await ctx.reply("❌ Không tìm thấy giao dịch nào để xóa.");
+      return;
+    }
+    const currency = profile.currency ?? "VND";
+    const typeLabel = deleted.type === "income" ? "Thu nhập" : "Chi tiêu";
+    await ctx.reply(
+      `🗑️ *Đã xóa giao dịch gần nhất!*\n\n` +
+        `${typeLabel}: ${fmt(deleted.amount, currency)}\n` +
+        `📝 ${deleted.description ?? "Không có mô tả"}\n` +
+        `📅 ${deleted.date}`,
+      { parse_mode: "Markdown" },
+    );
+    return;
+  }
+
+  // ── Xử lý giao dịch ──
   const parsed = parseTransaction(text);
   if (!parsed) {
     await ctx.reply(
