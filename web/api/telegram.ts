@@ -805,13 +805,17 @@ const EXPENSE_KW = [
 function parseAmount(token: string): number | null {
   const cleaned = token.replace(/[,$€£₹đ]/gi, "").trim();
   if (!cleaned) return null;
-  const m = cleaned.match(/^([0-9]+(?:[.,][0-9]+)?)\s*(k|tr|triệu|trieu|m)?$/i);
+  const m = cleaned.match(
+    /^([0-9]+(?:[.,][0-9]+)?)\s*(k|tr|triệu|trieu|triêu|m|nghìn|nghin|nghìn|ngàn|ngan)?$/i,
+  );
   if (!m) return null;
   const num = parseFloat(m[1].replace(",", "."));
   if (isNaN(num) || num <= 0) return null;
   const suffix = (m[2] ?? "").toLowerCase();
-  if (suffix === "k") return num * 1000;
-  if (["tr", "triệu", "trieu", "m"].includes(suffix)) return num * 1000000;
+  if (["k", "nghìn", "nghin", "ngàn", "ngan"].includes(suffix))
+    return num * 1000;
+  if (["tr", "triệu", "trieu", "triêu", "m"].includes(suffix))
+    return num * 1000000;
   return num;
 }
 
@@ -886,20 +890,31 @@ function parseTransaction(text: string): ParsedTransaction | null {
   }
   const remaining = workTokens.filter((_, i) => !dateIdxs.includes(i));
 
-  // Extract amount
+  // Extract amount (supports "2 triệu", "500 nghìn", "35k", etc.)
   let amount: number | null = null;
-  let amountIdx = -1;
+  let amountIdxs: number[] = [];
   for (let i = 0; i < remaining.length; i++) {
+    // Try single token first: "35k", "2tr", "50000"
     const p = parseAmount(remaining[i]);
     if (p !== null) {
       amount = p;
-      amountIdx = i;
+      amountIdxs = [i];
       break;
+    }
+    // Try two tokens: "2 triệu", "500 nghìn", "1.5 tr"
+    if (i + 1 < remaining.length) {
+      const combined = remaining[i] + remaining[i + 1];
+      const p2 = parseAmount(combined);
+      if (p2 !== null) {
+        amount = p2;
+        amountIdxs = [i, i + 1];
+        break;
+      }
     }
   }
   if (amount === null) return null;
 
-  const descTokens = remaining.filter((_, i) => i !== amountIdx);
+  const descTokens = remaining.filter((_, i) => !amountIdxs.includes(i));
   const descLower = descTokens.map((s) => s.toLowerCase());
   const fullDesc = descLower.join(" ");
 
