@@ -1,20 +1,20 @@
-import { useState } from 'react';
-import { Pencil, Trash2, Send } from 'lucide-react';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Spinner } from '@/components/ui/Spinner';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { useDeleteTransaction } from '@/hooks/useTransactions';
-import { useAuthStore } from '@/store/authStore';
-import { formatCurrency, formatDate, cn } from '@/lib/utils';
-import type { Transaction, PaginatedResult } from '@/types';
+import { useState } from "react";
+import { Pencil, Trash2, Send } from "lucide-react";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Spinner } from "@/components/ui/Spinner";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { useDeleteTransaction } from "@/hooks/useTransactions";
+import { useAuthStore } from "@/store/authStore";
+import { formatCurrency, formatDate, cn } from "@/lib/utils";
+import type { Transaction, PaginatedResult } from "@/types";
 
 interface TransactionListProps {
-  result:    PaginatedResult<Transaction> | undefined;
+  result: PaginatedResult<Transaction> | undefined;
   isLoading: boolean;
-  page:      number;
+  page: number;
   onPageChange: (p: number) => void;
-  onEdit:    (tx: Transaction) => void;
+  onEdit: (tx: Transaction) => void;
 }
 
 function ConfirmDelete({
@@ -23,17 +23,17 @@ function ConfirmDelete({
   loading,
 }: {
   onConfirm: () => void;
-  onCancel:  () => void;
-  loading:   boolean;
+  onCancel: () => void;
+  loading: boolean;
 }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-gray-500">Delete?</span>
+      <span className="text-xs text-gray-500">Xóa?</span>
       <Button size="xs" variant="danger" onClick={onConfirm} loading={loading}>
-        Yes
+        Có
       </Button>
       <Button size="xs" variant="ghost" onClick={onCancel}>
-        No
+        Không
       </Button>
     </div>
   );
@@ -46,14 +46,14 @@ export function TransactionList({
   onPageChange,
   onEdit,
 }: TransactionListProps) {
-  const currency = useAuthStore((s) => s.profile?.currency ?? 'USD');
+  const currency = useAuthStore((s) => s.profile?.currency ?? "VND");
   const deleteMutation = useDeleteTransaction();
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
   if (isLoading) {
     return (
       <div className="flex h-40 items-center justify-center">
-        <Spinner label="Loading transactions…" />
+        <Spinner label="Đang tải giao dịch…" />
       </div>
     );
   }
@@ -64,8 +64,8 @@ export function TransactionList({
   if (transactions.length === 0) {
     return (
       <EmptyState
-        title="No transactions found"
-        description="Try adjusting your filters or add a new transaction."
+        title="Không tìm thấy giao dịch"
+        description="Thử điều chỉnh bộ lọc hoặc thêm giao dịch mới."
       />
     );
   }
@@ -75,9 +75,9 @@ export function TransactionList({
       {/* Table header (desktop) */}
       <div className="hidden grid-cols-[auto_1fr_auto_auto_auto] gap-4 px-4 text-xs font-medium uppercase tracking-wide text-gray-400 sm:grid">
         <span className="w-3" />
-        <span>Description</span>
-        <span className="text-right">Amount</span>
-        <span>Date</span>
+        <span>Mô tả</span>
+        <span className="text-right">Số tiền</span>
+        <span>Ngày</span>
         <span className="w-24" />
       </div>
 
@@ -92,23 +92,28 @@ export function TransactionList({
             <div className="flex items-center">
               <div
                 className="h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: tx.category?.color ?? '#d1d5db' }}
+                style={{ backgroundColor: tx.category?.color ?? "#d1d5db" }}
               />
             </div>
 
             {/* Info */}
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-gray-900">
-                {tx.description || tx.category?.name || 'Uncategorised'}
+                {tx.description || tx.category?.name || "Chưa phân loại"}
               </p>
               <div className="mt-0.5 flex flex-wrap items-center gap-2">
                 {tx.category && (
-                  <Badge variant="default" size="sm">{tx.category.name}</Badge>
+                  <Badge variant="default" size="sm">
+                    {tx.category.name}
+                  </Badge>
                 )}
-                <Badge variant={tx.type === 'income' ? 'income' : 'expense'} size="sm">
-                  {tx.type}
+                <Badge
+                  variant={tx.type === "income" ? "income" : "expense"}
+                  size="sm"
+                >
+                  {tx.type === "income" ? "Thu nhập" : "Chi tiêu"}
                 </Badge>
-                {tx.source === 'telegram' && (
+                {tx.source === "telegram" && (
                   <span className="flex items-center gap-0.5 text-xs text-blue-500">
                     <Send className="h-3 w-3" /> Telegram
                   </span>
@@ -118,14 +123,22 @@ export function TransactionList({
 
             {/* Amount */}
             <div className="flex items-center justify-end">
-              <span className={cn('text-sm font-semibold', tx.type === 'income' ? 'text-emerald-600' : 'text-red-600')}>
-                {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, currency)}
+              <span
+                className={cn(
+                  "text-sm font-semibold",
+                  tx.type === "income" ? "text-emerald-600" : "text-red-600",
+                )}
+              >
+                {tx.type === "income" ? "+" : "-"}
+                {formatCurrency(tx.amount, currency)}
               </span>
             </div>
 
             {/* Date */}
             <div className="hidden items-center sm:flex">
-              <span className="text-sm text-gray-400">{formatDate(tx.date)}</span>
+              <span className="text-sm text-gray-400">
+                {formatDate(tx.date)}
+              </span>
             </div>
 
             {/* Actions */}
@@ -145,7 +158,7 @@ export function TransactionList({
                     size="xs"
                     variant="ghost"
                     onClick={() => onEdit(tx)}
-                    aria-label="Edit"
+                    aria-label="Sửa"
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
@@ -153,7 +166,7 @@ export function TransactionList({
                     size="xs"
                     variant="ghost"
                     onClick={() => setConfirmId(tx.id)}
-                    aria-label="Delete"
+                    aria-label="Xóa"
                     className="text-red-400 hover:text-red-600 hover:bg-red-50"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -168,9 +181,7 @@ export function TransactionList({
       {/* Pagination */}
       {meta && meta.total_pages > 1 && (
         <div className="flex items-center justify-between pt-2">
-          <p className="text-sm text-gray-500">
-            {meta.total} result{meta.total !== 1 ? 's' : ''}
-          </p>
+          <p className="text-sm text-gray-500">{meta.total} kết quả</p>
           <div className="flex items-center gap-2">
             <Button
               size="sm"
@@ -178,7 +189,7 @@ export function TransactionList({
               disabled={page <= 1}
               onClick={() => onPageChange(page - 1)}
             >
-              Previous
+              Trước
             </Button>
             <span className="text-sm text-gray-600">
               {page} / {meta.total_pages}
@@ -189,7 +200,7 @@ export function TransactionList({
               disabled={page >= meta.total_pages}
               onClick={() => onPageChange(page + 1)}
             >
-              Next
+              Sau
             </Button>
           </div>
         </div>

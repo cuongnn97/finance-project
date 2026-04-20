@@ -1,10 +1,10 @@
-import { type ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
-import { Sidebar } from './Sidebar';
-import { Navbar } from './Navbar';
-import { ToastContainer } from '@/components/ui/Toast';
-import { PageLoader } from '@/components/ui/Spinner';
-import { useAuthStore } from '@/store/authStore';
+import { type ReactNode } from "react";
+import { Navigate } from "react-router-dom";
+import { Sidebar } from "./Sidebar";
+import { Navbar } from "./Navbar";
+import { ToastContainer } from "@/components/ui/Toast";
+import { PageLoader } from "@/components/ui/Spinner";
+import { useAuthStore } from "@/store/authStore";
 
 interface LayoutProps {
   children: ReactNode;
@@ -16,7 +16,7 @@ export function Layout({ children }: LayoutProps) {
   if (!isInitialized || isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
-        <PageLoader label="Starting FinanceOS…" />
+        <PageLoader label="Đang khởi động FinanceOS…" />
       </div>
     );
   }

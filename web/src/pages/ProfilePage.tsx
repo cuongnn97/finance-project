@@ -1,20 +1,20 @@
-import { useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Save, Send } from 'lucide-react';
-import { profileSchema, type ProfileFormValues } from '@/schemas';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Button } from '@/components/ui/Button';
-import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
-import { useAuthStore } from '@/store/authStore';
-import { useUIStore } from '@/store/uiStore';
-import { supabase } from '@/lib/supabase';
-import { CURRENCIES } from '@/lib/utils';
+import { useEffect } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Save, Send } from "lucide-react";
+import { profileSchema, type ProfileFormValues } from "@/schemas";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
+import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
+import { useAuthStore } from "@/store/authStore";
+import { useUIStore } from "@/store/uiStore";
+import { supabase } from "@/lib/supabase";
+import { CURRENCIES } from "@/lib/utils";
 
-const TIMEZONE_OPTIONS = Intl.supportedValuesOf('timeZone').map((tz) => ({
+const TIMEZONE_OPTIONS = Intl.supportedValuesOf("timeZone").map((tz) => ({
   value: tz,
-  label: tz.replace(/_/g, ' '),
+  label: tz.replace(/_/g, " "),
 }));
 
 const CURRENCY_OPTIONS = CURRENCIES.map((c) => ({
@@ -35,18 +35,18 @@ export default function ProfilePage() {
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      full_name: profile?.full_name ?? '',
-      currency:  profile?.currency  ?? 'USD',
-      timezone:  profile?.timezone  ?? 'UTC',
+      full_name: profile?.full_name ?? "",
+      currency: profile?.currency ?? "VND",
+      timezone: profile?.timezone ?? "Asia/Ho_Chi_Minh",
     },
   });
 
   useEffect(() => {
     if (profile) {
       reset({
-        full_name: profile.full_name ?? '',
-        currency:  profile.currency,
-        timezone:  profile.timezone,
+        full_name: profile.full_name ?? "",
+        currency: profile.currency,
+        timezone: profile.timezone,
       });
     }
   }, [profile, reset]);
@@ -55,31 +55,31 @@ export default function ProfilePage() {
     if (!profile) return;
 
     const { error } = await supabase
-      .from('profiles')
+      .from("profiles")
       .update(values)
-      .eq('id', profile.id);
+      .eq("id", profile.id);
 
     if (error) {
-      toast.error('Update failed', error.message);
+      toast.error("Cập nhật thất bại", error.message);
       return;
     }
 
     await refreshProfile();
-    toast.success('Profile updated');
-    reset(values); // mark form as pristine
+    toast.success("Đã cập nhật hồ sơ");
+    reset(values);
   };
 
   return (
     <div className="max-w-lg space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-gray-900">Profile</h1>
-        <p className="text-sm text-gray-500">Manage your account settings</p>
+        <h1 className="text-xl font-semibold text-gray-900">Hồ sơ</h1>
+        <p className="text-sm text-gray-500">Quản lý cài đặt tài khoản</p>
       </div>
 
-      {/* Account info */}
+      {/* Thông tin tài khoản */}
       <Card>
         <CardHeader>
-          <CardTitle>Account</CardTitle>
+          <CardTitle>Tài khoản</CardTitle>
         </CardHeader>
         <div className="space-y-1.5">
           <p className="text-sm text-gray-500">Email</p>
@@ -87,17 +87,21 @@ export default function ProfilePage() {
         </div>
       </Card>
 
-      {/* Profile form */}
+      {/* Form hồ sơ */}
       <Card>
         <CardHeader>
-          <CardTitle>Personal Info</CardTitle>
+          <CardTitle>Thông tin cá nhân</CardTitle>
         </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="space-y-4"
+          noValidate
+        >
           <Input
-            label="Full Name"
-            placeholder="Jane Doe"
+            label="Họ và tên"
+            placeholder="Nguyễn Văn A"
             error={errors.full_name?.message}
-            {...register('full_name')}
+            {...register("full_name")}
           />
 
           <Controller
@@ -105,7 +109,7 @@ export default function ProfilePage() {
             control={control}
             render={({ field }) => (
               <Select
-                label="Currency"
+                label="Đơn vị tiền tệ"
                 options={CURRENCY_OPTIONS}
                 value={field.value}
                 onChange={field.onChange}
@@ -119,7 +123,7 @@ export default function ProfilePage() {
             control={control}
             render={({ field }) => (
               <Select
-                label="Timezone"
+                label="Múi giờ"
                 options={TIMEZONE_OPTIONS}
                 value={field.value}
                 onChange={field.onChange}
@@ -134,12 +138,12 @@ export default function ProfilePage() {
             disabled={!isDirty}
             leftIcon={<Save className="h-4 w-4" />}
           >
-            Save Changes
+            Lưu thay đổi
           </Button>
         </form>
       </Card>
 
-      {/* Telegram link info */}
+      {/* Liên kết Telegram */}
       <Card>
         <CardHeader>
           <CardTitle>Telegram Bot</CardTitle>
@@ -149,26 +153,28 @@ export default function ProfilePage() {
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-green-500" />
               <span className="text-sm text-gray-700">
-                Linked (chat ID: {profile.telegram_chat_id})
+                Đã liên kết (chat ID: {profile.telegram_chat_id})
               </span>
             </div>
           ) : (
-            <p className="text-sm text-gray-500">Not linked yet</p>
+            <p className="text-sm text-gray-500">Chưa liên kết</p>
           )}
           <div className="rounded-lg bg-blue-50 p-3">
             <p className="text-sm text-blue-700">
-              To link your Telegram account, start a chat with the bot and send{' '}
-              <code className="rounded bg-blue-100 px-1 font-mono">/start {profile?.id?.slice(0, 8)}</code>
+              Để liên kết tài khoản Telegram, mở bot và gửi{" "}
+              <code className="rounded bg-blue-100 px-1 font-mono">
+                /start {profile?.id}
+              </code>
             </p>
           </div>
           <a
-            href={`https://t.me/${import.meta.env.VITE_TELEGRAM_BOT_USERNAME ?? 'your_bot'}`}
+            href={`https://t.me/${import.meta.env.VITE_TELEGRAM_BOT_USERNAME ?? "your_bot"}?start=${profile?.id ?? ""}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 transition-colors"
           >
             <Send className="h-4 w-4" />
-            Open Telegram Bot
+            Mở Telegram Bot
           </a>
         </div>
       </Card>

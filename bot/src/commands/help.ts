@@ -1,44 +1,50 @@
-import type { Context } from 'telegraf';
+import type { Context } from "telegraf";
 
 export async function handleHelp(ctx: Context) {
   const helpText = `
-📊 *FinanceOS Bot Help*
+📊 *Trợ giúp FinanceOS Bot*
 
-*Adding Transactions*
-Just send a plain message describing your income or expense:
+*Thêm giao dịch*
+Gửi tin nhắn mô tả thu nhập hoặc chi tiêu:
 
-_Expenses:_
-• \`coffee 4.50\`
-• \`spent 85 groceries\`
-• \`-120 taxi\`
-• \`bought clothes 200\`
-• \`rent 1200 yesterday\`
-• \`food 35 2026-04-15\`
+_Chi tiêu:_
+• \`cà phê 35k\`
+• \`ăn trưa 50k\`
+• \`chi 85k tiền chợ\`
+• \`-120k taxi\`
+• \`mua quần áo 200k\`
+• \`tiền nhà 5tr\`
+• \`grab 25k hôm qua\`
+• \`xăng 100k 2026-04-15\`
 
-_Income:_
-• \`salary 5000\`
-• \`+1200 freelance\`
-• \`received 800 client payment\`
-• \`income 500 bonus\`
+_Thu nhập:_
+• \`lương 15tr\`
+• \`+5000k freelance\`
+• \`nhận 3tr tiền dự án\`
+• \`thu nhập 500k thưởng\`
 
-*Supported Date Formats*
-• \`today\` / \`yesterday\`
-• \`last monday\`
+*Định dạng số tiền*
+• \`35k\` = 35.000
+• \`1.5tr\` = 1.500.000
+• \`50000\` = 50.000
+
+*Định dạng ngày*
+• \`hôm nay\` / \`hôm qua\` / \`hôm kia\`
 • \`2026-04-15\` (ISO)
-• \`15/04\` (day/month)
+• \`15/04\` (ngày/tháng)
 
-*Commands*
-/start — Link your account
-/balance — View this month's balance
-/report — Monthly spending report
-/recent — Last 5 transactions
-/help — Show this message
+*Lệnh*
+/start — Liên kết tài khoản
+/balance — Xem số dư tháng này
+/report — Báo cáo chi tiêu tháng
+/recent — 5 giao dịch gần nhất
+/help — Hiện trợ giúp này
 
-*Tips*
-• Start with \`+\` for income, \`-\` for expense
-• Keywords like _salary_, _freelance_ auto-detect income
-• Keywords like _coffee_, _groceries_ auto-detect expense
+*Mẹo*
+• Bắt đầu bằng \`+\` cho thu nhập, \`-\` cho chi tiêu
+• Từ khóa như _lương_, _freelance_ tự nhận diện thu nhập
+• Từ khóa như _cà phê_, _ăn trưa_ tự nhận diện chi tiêu
 `.trim();
 
-  await ctx.reply(helpText, { parse_mode: 'Markdown' });
+  await ctx.reply(helpText, { parse_mode: "Markdown" });
 }
