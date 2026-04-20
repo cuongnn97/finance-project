@@ -4,6 +4,8 @@ import {
   Wallet,
   ArrowUpRight,
   ArrowDownRight,
+  PiggyBank,
+  ReceiptText,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
@@ -76,8 +78,8 @@ export function SummaryCards() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, i) => (
           <Card key={i} className="flex h-28 items-center justify-center">
             <Spinner size="sm" />
           </Card>
@@ -88,8 +90,19 @@ export function SummaryCards() {
 
   if (!data) return null;
 
+  const savingsRate =
+    data.total_income > 0
+      ? ((data.total_income - data.total_expense) / data.total_income) * 100
+      : 0;
+  const savingsRateColor =
+    savingsRate >= 20
+      ? "text-emerald-600"
+      : savingsRate >= 10
+        ? "text-amber-600"
+        : "text-red-600";
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
       <SummaryCard
         title="Số dư"
         value={formatCurrency(data.balance, currency)}
@@ -114,9 +127,16 @@ export function SummaryCards() {
         valueColor="text-red-600"
       />
       <SummaryCard
+        title="Tỷ lệ tiết kiệm"
+        value={`${savingsRate.toFixed(1)}%`}
+        icon={<PiggyBank className="h-5 w-5 text-teal-600" />}
+        iconBg="bg-teal-50"
+        valueColor={savingsRateColor}
+      />
+      <SummaryCard
         title="Giao dịch"
         value={String(data.transaction_count)}
-        icon={<ArrowUpRight className="h-5 w-5 text-purple-600" />}
+        icon={<ReceiptText className="h-5 w-5 text-purple-600" />}
         iconBg="bg-purple-50"
       />
     </div>
