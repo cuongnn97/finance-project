@@ -362,6 +362,14 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
     "website",
     "app",
     "consulting",
+    "job",
+    "làm job",
+    "làm thêm",
+    "làm ngoài",
+    "job ngoài",
+    "chạy thêm",
+    "công việc",
+    "kiếm",
   ],
   "đầu tư": [
     "cổ tức",
@@ -460,7 +468,10 @@ async function matchByLLM(
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
 
-  const categoryNames = categories.map((c) => c.name);
+  const categoryList = categories.map((c) => c.name).join(", ");
+
+  const type = categories[0]?.type ?? "expense";
+  const typeLabel = type === "income" ? "thu nhập" : "chi tiêu";
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -472,15 +483,38 @@ async function matchByLLM(
       body: JSON.stringify({
         model: "gpt-4o-mini",
         temperature: 0,
-        max_tokens: 50,
+        max_tokens: 30,
         messages: [
           {
             role: "system",
-            content:
-              `Bạn là hệ thống phân loại giao dịch tài chính. ` +
-              `Cho mô tả giao dịch, hãy trả về TÊN DANH MỤC phù hợp nhất từ danh sách sau: ${categoryNames.join(", ")}. ` +
-              `Chỉ trả về đúng tên danh mục, không giải thích. ` +
-              `Nếu không chắc chắn, trả về "UNKNOWN".`,
+            content: [
+              `Bạn là hệ thống phân loại giao dịch tài chính cá nhân tại Việt Nam.`,
+              `Đây là giao dịch loại: ${typeLabel}.`,
+              `Danh sách danh mục: [${categoryList}]`,
+              ``,
+              `Quy tắc:`,
+              `- Chỉ trả về ĐÚNG MỘT tên danh mục từ danh sách trên.`,
+              `- Không giải thích, không thêm ký tự nào khác.`,
+              `- Hiểu ngữ cảnh tiếng Việt tự nhiên, bao gồm tiếng lóng và viết tắt.`,
+              `- Nếu không chắc chắn, trả về "UNKNOWN".`,
+              ``,
+              `Ví dụ (chi tiêu):`,
+              `"đi ăn với bồ" → Ăn uống`,
+              `"đổ xăng xe" → Di chuyển`,
+              `"mua bim bim" → Ăn uống`,
+              `"cắt tóc" → Mua sắm`,
+              `"tiền trọ tháng 4" → Nhà ở`,
+              `"xem phim rạp" → Giải trí`,
+              `"mua thuốc cảm" → Sức khỏe`,
+              `"đóng học phí" → Giáo dục`,
+              `"trả tiền điện" → Hóa đơn`,
+              ``,
+              `Ví dụ (thu nhập):`,
+              `"làm job ngoài" → Freelance`,
+              `"lương tháng 4" → Lương`,
+              `"người yêu cho" → Thu nhập khác`,
+              `"lãi tiết kiệm" → Đầu tư`,
+            ].join("\n"),
           },
           {
             role: "user",
@@ -498,7 +532,7 @@ async function matchByLLM(
     const result = data.choices?.[0]?.message?.content?.trim();
     if (!result || result === "UNKNOWN") return null;
 
-    // Tìm category match với kết quả LLM
+    // Tìm category match với kết quả LLM (exact → partial)
     const resultLower = result.toLowerCase();
     return (
       categories.find((c) => c.name.toLowerCase() === resultLower) ??
@@ -708,6 +742,17 @@ const INCOME_KW = [
   "bố cho",
   "ba cho",
   "má cho",
+  "làm job",
+  "làm thêm",
+  "làm ngoài",
+  "job ngoài",
+  "chạy thêm",
+  "kiếm",
+  "kiếm được",
+  "thu được",
+  "công việc",
+  "dự án",
+  "project",
   "salary",
   "wage",
   "freelance",
