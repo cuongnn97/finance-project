@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Save, Send } from "lucide-react";
+import { Save, Send, BotMessageSquare } from "lucide-react";
 import { profileSchema, type ProfileFormValues } from "@/schemas";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -21,6 +21,92 @@ const CURRENCY_OPTIONS = CURRENCIES.map((c) => ({
   value: c.code,
   label: `${c.code} — ${c.name}`,
 }));
+
+// ── Telegram Card ─────────────────────────────────────────────
+
+const BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME as string | undefined;
+
+function TelegramCard({
+  profileId,
+  chatId,
+}: {
+  profileId?: string;
+  chatId?: number | null;
+}) {
+  const isLinked     = !!chatId;
+  const isBotReady   = !!BOT_USERNAME;
+  const deepLinkUrl  = isBotReady
+    ? `https://t.me/${BOT_USERNAME}?start=${profileId ?? ""}`
+    : null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Telegram Bot</CardTitle>
+        <div className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+          isLinked ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
+        }`}>
+          <div className={`h-1.5 w-1.5 rounded-full ${isLinked ? "bg-green-500" : "bg-gray-400"}`} />
+          {isLinked ? "Đã liên kết" : "Chưa liên kết"}
+        </div>
+      </CardHeader>
+
+      <div className="space-y-3">
+        {!isBotReady ? (
+          /* Bot chưa được cấu hình bởi admin */
+          <div className="rounded-lg bg-amber-50 p-3">
+            <div className="flex items-start gap-2">
+              <BotMessageSquare className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+              <p className="text-sm text-amber-700">
+                Tính năng Telegram Bot chưa được bật. Liên hệ quản trị viên để kích hoạt.
+              </p>
+            </div>
+          </div>
+        ) : isLinked ? (
+          /* Đã liên kết */
+          <div className="rounded-lg bg-green-50 p-3">
+            <p className="text-sm text-green-700">
+              Tài khoản đã liên kết thành công. Bạn có thể nhắn tin cho bot để ghi giao dịch nhanh.
+            </p>
+          </div>
+        ) : (
+          /* Chưa liên kết, bot sẵn sàng */
+          <div className="rounded-lg bg-blue-50 p-3">
+            <p className="text-sm text-blue-700">
+              Nhấn nút bên dưới để mở bot Telegram — bot sẽ tự động liên kết tài khoản của bạn.
+            </p>
+          </div>
+        )}
+
+        {isBotReady && !isLinked && deepLinkUrl && (
+          <a
+            href={deepLinkUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+          >
+            <Send className="h-4 w-4" />
+            Mở Telegram Bot
+          </a>
+        )}
+
+        {isBotReady && isLinked && deepLinkUrl && (
+          <a
+            href={deepLinkUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+          >
+            <Send className="h-4 w-4" />
+            Mở bot Telegram
+          </a>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────
 
 export default function ProfilePage() {
   const { profile, refreshProfile } = useAuthStore();
@@ -144,40 +230,7 @@ export default function ProfilePage() {
       </Card>
 
       {/* Liên kết Telegram */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Telegram Bot</CardTitle>
-        </CardHeader>
-        <div className="space-y-3">
-          {profile?.telegram_chat_id ? (
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-green-500" />
-              <span className="text-sm text-gray-700">
-                Đã liên kết (chat ID: {profile.telegram_chat_id})
-              </span>
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">Chưa liên kết</p>
-          )}
-          <div className="rounded-lg bg-blue-50 p-3">
-            <p className="text-sm text-blue-700">
-              Để liên kết tài khoản Telegram, mở bot và gửi{" "}
-              <code className="rounded bg-blue-100 px-1 font-mono">
-                /start {profile?.id}
-              </code>
-            </p>
-          </div>
-          <a
-            href={`https://t.me/${import.meta.env.VITE_TELEGRAM_BOT_USERNAME ?? "your_bot"}?start=${profile?.id ?? ""}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 transition-colors"
-          >
-            <Send className="h-4 w-4" />
-            Mở Telegram Bot
-          </a>
-        </div>
-      </Card>
+      <TelegramCard profileId={profile?.id} chatId={profile?.telegram_chat_id} />
     </div>
   );
 }
