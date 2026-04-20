@@ -1,19 +1,18 @@
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { SummaryCards } from '@/components/dashboard/SummaryCards';
-import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
-import { ExpenseChart } from '@/components/dashboard/ExpenseChart';
-import { TransactionForm } from '@/components/transactions/TransactionForm';
-import { useAuthStore } from '@/store/authStore';
-import { formatMonthYear } from '@/lib/utils';
+import { useState } from "react";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { SummaryCards } from "@/components/dashboard/SummaryCards";
+import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
+import { ExpenseChart } from "@/components/dashboard/ExpenseChart";
+import { TransactionForm } from "@/components/transactions/TransactionForm";
+import { useAuthStore } from "@/store/authStore";
 
 export default function DashboardPage() {
   const [formOpen, setFormOpen] = useState(false);
   const profile = useAuthStore((s) => s.profile);
 
   const now = new Date();
-  const currentMonthLabel = formatMonthYear(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`);
+  const currentMonthLabel = `Tháng ${now.getMonth() + 1}/${now.getFullYear()}`;
 
   return (
     <div className="space-y-6">
@@ -21,12 +20,15 @@ export default function DashboardPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">
-            Good {getGreeting()}, {profile?.full_name?.split(' ')[0] ?? 'there'} 👋
+            {getGreeting()}, {profile?.full_name?.split(" ").pop() ?? "bạn"} 👋
           </h1>
-          <p className="text-sm text-gray-500">{currentMonthLabel} overview</p>
+          <p className="text-sm text-gray-500">Tổng quan {currentMonthLabel}</p>
         </div>
-        <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setFormOpen(true)}>
-          Add Transaction
+        <Button
+          leftIcon={<Plus className="h-4 w-4" />}
+          onClick={() => setFormOpen(true)}
+        >
+          Thêm giao dịch
         </Button>
       </div>
 
@@ -47,7 +49,7 @@ export default function DashboardPage() {
 
 function getGreeting(): string {
   const h = new Date().getHours();
-  if (h < 12) return 'morning';
-  if (h < 17) return 'afternoon';
-  return 'evening';
+  if (h < 12) return "Chào buổi sáng";
+  if (h < 17) return "Chào buổi chiều";
+  return "Chào buổi tối";
 }

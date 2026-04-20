@@ -17,8 +17,8 @@ CREATE TABLE public.profiles (
   email       TEXT         NOT NULL,
   full_name   TEXT,
   telegram_chat_id BIGINT  UNIQUE,
-  currency    TEXT         NOT NULL DEFAULT 'USD',
-  timezone    TEXT         NOT NULL DEFAULT 'UTC',
+  currency    TEXT         NOT NULL DEFAULT 'VND',
+  timezone    TEXT         NOT NULL DEFAULT 'Asia/Ho_Chi_Minh',
   created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
@@ -151,19 +151,19 @@ CREATE OR REPLACE FUNCTION public.create_default_categories(p_user_id UUID)
 RETURNS VOID AS $$
 BEGIN
   INSERT INTO public.categories (user_id, name, type, color, icon, is_default) VALUES
-    (p_user_id, 'Salary',          'income',  '#10b981', 'briefcase',    true),
+    (p_user_id, 'Lương',           'income',  '#10b981', 'briefcase',    true),
     (p_user_id, 'Freelance',       'income',  '#3b82f6', 'laptop',       true),
-    (p_user_id, 'Investment',      'income',  '#8b5cf6', 'trending-up',  true),
-    (p_user_id, 'Other Income',    'income',  '#f59e0b', 'plus-circle',  true),
-    (p_user_id, 'Food & Dining',   'expense', '#ef4444', 'utensils',     true),
-    (p_user_id, 'Transportation',  'expense', '#f97316', 'car',          true),
-    (p_user_id, 'Housing',         'expense', '#06b6d4', 'home',         true),
-    (p_user_id, 'Entertainment',   'expense', '#ec4899', 'film',         true),
-    (p_user_id, 'Shopping',        'expense', '#84cc16', 'shopping-bag', true),
-    (p_user_id, 'Healthcare',      'expense', '#14b8a6', 'heart',        true),
-    (p_user_id, 'Education',       'expense', '#6366f1', 'book-open',    true),
-    (p_user_id, 'Utilities',       'expense', '#78716c', 'zap',          true),
-    (p_user_id, 'Other Expense',   'expense', '#6b7280', 'minus-circle', true);
+    (p_user_id, 'Đầu tư',         'income',  '#8b5cf6', 'trending-up',  true),
+    (p_user_id, 'Thu nhập khác',   'income',  '#f59e0b', 'plus-circle',  true),
+    (p_user_id, 'Ăn uống',        'expense', '#ef4444', 'utensils',     true),
+    (p_user_id, 'Di chuyển',      'expense', '#f97316', 'car',          true),
+    (p_user_id, 'Nhà ở',          'expense', '#06b6d4', 'home',         true),
+    (p_user_id, 'Giải trí',       'expense', '#ec4899', 'film',         true),
+    (p_user_id, 'Mua sắm',        'expense', '#84cc16', 'shopping-bag', true),
+    (p_user_id, 'Sức khỏe',       'expense', '#14b8a6', 'heart',        true),
+    (p_user_id, 'Giáo dục',       'expense', '#6366f1', 'book-open',    true),
+    (p_user_id, 'Hóa đơn',        'expense', '#78716c', 'zap',          true),
+    (p_user_id, 'Chi phí khác',   'expense', '#6b7280', 'minus-circle', true);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

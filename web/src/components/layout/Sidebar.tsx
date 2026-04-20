@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
   ArrowLeftRight,
@@ -7,30 +7,35 @@ import {
   User,
   X,
   Wallet,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useUIStore } from '@/store/uiStore';
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useUIStore } from "@/store/uiStore";
 
 const navItems = [
-  { to: '/',              icon: LayoutDashboard, label: 'Dashboard'    },
-  { to: '/transactions',  icon: ArrowLeftRight,  label: 'Transactions' },
-  { to: '/categories',    icon: Tag,             label: 'Categories'   },
-  { to: '/reports',       icon: BarChart3,       label: 'Reports'      },
-  { to: '/profile',       icon: User,            label: 'Profile'      },
+  { to: "/", icon: LayoutDashboard, label: "Tổng quan" },
+  { to: "/transactions", icon: ArrowLeftRight, label: "Giao dịch" },
+  { to: "/categories", icon: Tag, label: "Danh mục" },
+  { to: "/reports", icon: BarChart3, label: "Báo cáo" },
+  { to: "/profile", icon: User, label: "Hồ sơ" },
 ];
 
-function NavItem({ to, icon: Icon, label, onClick }: typeof navItems[0] & { onClick?: () => void }) {
+function NavItem({
+  to,
+  icon: Icon,
+  label,
+  onClick,
+}: (typeof navItems)[0] & { onClick?: () => void }) {
   return (
     <NavLink
       to={to}
-      end={to === '/'}
+      end={to === "/"}
       onClick={onClick}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+          "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
           isActive
-            ? 'bg-brand-600 text-white shadow-sm'
-            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+            ? "bg-brand-600 text-white shadow-sm"
+            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
         )
       }
     >
@@ -57,9 +62,9 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-30 flex w-64 flex-col bg-white border-r border-gray-100 transition-transform duration-200',
-          'lg:relative lg:translate-x-0 lg:z-auto',
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          "fixed inset-y-0 left-0 z-30 flex w-64 flex-col bg-white border-r border-gray-100 transition-transform duration-200",
+          "lg:relative lg:translate-x-0 lg:z-auto",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         {/* Logo */}

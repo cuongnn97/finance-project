@@ -1,19 +1,19 @@
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { TransactionList } from '@/components/transactions/TransactionList';
-import { TransactionFiltersBar } from '@/components/transactions/TransactionFilters';
-import { TransactionForm } from '@/components/transactions/TransactionForm';
-import { useTransactions } from '@/hooks/useTransactions';
-import type { Transaction, TransactionFilters } from '@/types';
+import { useState } from "react";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { TransactionList } from "@/components/transactions/TransactionList";
+import { TransactionFiltersBar } from "@/components/transactions/TransactionFilters";
+import { TransactionForm } from "@/components/transactions/TransactionForm";
+import { useTransactions } from "@/hooks/useTransactions";
+import type { Transaction, TransactionFilters } from "@/types";
 
 const DEFAULT_FILTERS: TransactionFilters = {
-  type: '',
-  category_id: '',
-  date_from: '',
-  date_to: '',
-  search: '',
+  type: "",
+  category_id: "",
+  date_from: "",
+  date_to: "",
+  search: "",
 };
 
 export default function TransactionsPage() {
@@ -26,7 +26,7 @@ export default function TransactionsPage() {
 
   const handleFilterChange = (f: TransactionFilters) => {
     setFilters(f);
-    setPage(1); // reset to first page on filter change
+    setPage(1);
   };
 
   const handleEdit = (tx: Transaction) => {
@@ -44,13 +44,16 @@ export default function TransactionsPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Transactions</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Giao dịch</h1>
           <p className="text-sm text-gray-500">
-            {result?.meta.total ?? 0} total records
+            Tổng cộng {result?.meta.total ?? 0} bản ghi
           </p>
         </div>
-        <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setFormOpen(true)}>
-          Add Transaction
+        <Button
+          leftIcon={<Plus className="h-4 w-4" />}
+          onClick={() => setFormOpen(true)}
+        >
+          Thêm giao dịch
         </Button>
       </div>
 
@@ -59,7 +62,10 @@ export default function TransactionsPage() {
         <TransactionFiltersBar
           filters={filters}
           onChange={handleFilterChange}
-          onReset={() => { setFilters(DEFAULT_FILTERS); setPage(1); }}
+          onReset={() => {
+            setFilters(DEFAULT_FILTERS);
+            setPage(1);
+          }}
         />
       </Card>
 
