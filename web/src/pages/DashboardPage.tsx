@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/Button";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { ExpenseChart } from "@/components/dashboard/ExpenseChart";
+import { MonthlyTrendChart } from "@/components/dashboard/MonthlyTrendChart";
+import { DailySpendingChart } from "@/components/dashboard/DailySpendingChart";
+import { SpendingForecast } from "@/components/dashboard/SpendingForecast";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { useAuthStore } from "@/store/authStore";
 
@@ -12,7 +15,9 @@ export default function DashboardPage() {
   const profile = useAuthStore((s) => s.profile);
 
   const now = new Date();
-  const currentMonthLabel = `Tháng ${now.getMonth() + 1}/${now.getFullYear()}`;
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const currentMonthLabel = `Tháng ${month}/${year}`;
 
   return (
     <div className="space-y-6">
@@ -32,14 +37,23 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      {/* KPI cards */}
+      {/* KPI cards: balance, income, expense, savings rate, transactions */}
       <SummaryCards />
 
-      {/* Main content grid */}
+      {/* Trend + expense breakdown */}
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <RecentTransactions />
-        <ExpenseChart year={now.getFullYear()} month={now.getMonth() + 1} />
+        <MonthlyTrendChart />
+        <ExpenseChart year={year} month={month} />
       </div>
+
+      {/* Daily spending + forecast + recent */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <DailySpendingChart year={year} month={month} />
+        <SpendingForecast year={year} month={month} />
+      </div>
+
+      {/* Recent transactions — full width */}
+      <RecentTransactions />
 
       {/* Transaction form */}
       <TransactionForm open={formOpen} onClose={() => setFormOpen(false)} />

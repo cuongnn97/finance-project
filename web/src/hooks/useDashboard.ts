@@ -5,6 +5,7 @@ import {
   getCurrentMonthRange,
   getPreviousMonthRange,
   calcPercentChange,
+  getMonthRange,
 } from '@/lib/utils';
 import type { DashboardSummary, CategorySpending } from '@/types';
 
@@ -98,5 +99,42 @@ export function useMonthlyTrend() {
     },
     enabled: !!userId,
     staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useDailySpending(year: number, month: number) {
+  const userId = useAuthStore((s) => s.user?.id);
+
+  return useQuery({
+    queryKey: ['dashboard', 'daily-spending', userId, year, month],
+    queryFn: async () => {
+      const range = getMonthRange(year, month);
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('date, amount, type')
+        .eq('user_id', userId!)
+        .gte('date', range.from)
+        .lte('date', range.to);
+
+      if (error) throw error;
+
+      const byDate = new Map<string, { expense: number; income: number }>();
+      for (const t of data ?? []) {
+        const entry = byDate.get(t.date) ?? { expense: 0, income: 0 };
+        if (t.type === 'expense') entry.expense += Number(t.amount);
+        else entry.income += Number(t.amount);
+        byDate.set(t.date, entry);
+      }
+
+      const daysInMonth = new Date(year, month, 0).getDate();
+      return Array.from({ length: daysInMonth }, (_, i) => {
+        const day = i + 1;
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const entry = byDate.get(dateStr) ?? { expense: 0, income: 0 };
+        return { day, date: dateStr, expense: entry.expense, income: entry.income };
+      });
+    },
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 2,
   });
 }
