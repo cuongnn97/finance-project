@@ -2,7 +2,6 @@ import { type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Navbar } from "./Navbar";
-import { ToastContainer } from "@/components/ui/Toast";
 import { PageLoader } from "@/components/ui/Spinner";
 import { useAuthStore } from "@/store/authStore";
 
@@ -39,7 +38,6 @@ export function Layout({ children }: LayoutProps) {
         </main>
       </div>
 
-      <ToastContainer />
     </div>
   );
 }

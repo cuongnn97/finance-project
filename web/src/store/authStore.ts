@@ -65,6 +65,24 @@ export const useAuthStore = create<AuthState>()(
 
           if (!error && data) {
             set({ profile: data as Profile });
+            return;
+          }
+
+          // Profile missing (e.g. manually deleted) — recreate it
+          if (error?.code === 'PGRST116') {
+            const { data: created } = await supabase
+              .from('profiles')
+              .insert({
+                id: user.id,
+                email: user.email ?? '',
+                full_name: user.user_metadata?.full_name
+                  ?? user.email?.split('@')[0]
+                  ?? null,
+              })
+              .select()
+              .single();
+
+            if (created) set({ profile: created as Profile });
           }
         },
       }),
