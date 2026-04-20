@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { Layout } from '@/components/layout/Layout';
 import { PageLoader } from '@/components/ui/Spinner';
+import { ToastContainer } from '@/components/ui/Toast';
 
 // Lazy-loaded pages
 const LoginPage    = lazy(() => import('@/pages/LoginPage'));
@@ -79,6 +80,7 @@ export default function App() {
           </Routes>
         </Suspense>
       </BrowserRouter>
+      <ToastContainer />
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   );
