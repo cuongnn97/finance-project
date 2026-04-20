@@ -77,15 +77,27 @@ export async function matchCategory(
 
   const lower = description.toLowerCase();
 
-  // 1. Exact category name match
+  // ── Tầng 0: Exact category name match ──
   const exact = categories.find((c) => lower.includes(c.name.toLowerCase()));
   if (exact) return exact;
 
-  // 2. Keyword-based matching
-  const matched = matchByKeywords(lower, categories);
-  if (matched) return matched;
+  // ── Tầng 1: History-based (học từ giao dịch cũ của user) ──
+  const historyMatch = await matchByHistory(userId, type, lower, categories);
+  if (historyMatch) return historyMatch;
 
-  // 3. Fallback: "Chi phí khác" / "Thu nhập khác" or first category
+  // ── Tầng 2: Keyword-based ──
+  const keywordMatch = matchByKeywords(lower, categories);
+  if (keywordMatch) return keywordMatch;
+
+  // ── Tầng 2.5: LLM classification (OpenAI) ──
+  const llmMatch = await matchByLLM(lower, categories);
+  if (llmMatch) return llmMatch;
+
+  // ── Tầng 3: Fuzzy matching (typo / thiếu dấu) ──
+  const fuzzyMatch = matchByFuzzy(lower, categories);
+  if (fuzzyMatch) return fuzzyMatch;
+
+  // ── Tầng 4: Fallback ──
   const fallbackNames =
     type === "expense"
       ? ["chi phí khác", "khác", "other"]
@@ -96,7 +108,118 @@ export async function matchCategory(
   return defaultCat ?? categories[0];
 }
 
-// ── Keyword mapping for smart category detection ────────────
+// ── Tầng 1: History-based matching ─────────────────────────
+// Query giao dịch cũ của user có description tương tự,
+// lấy category được dùng nhiều nhất cho description đó.
+
+async function matchByHistory(
+  userId: string,
+  type: "income" | "expense",
+  description: string,
+  categories: Category[],
+): Promise<Category | null> {
+  if (!description || description.length < 2) return null;
+
+  // Tìm giao dịch cũ có description giống hoặc chứa từ khóa tương tự
+  // Dùng ilike để tìm giao dịch có description chứa từ khóa chính
+  const words = description.split(/\s+/).filter((w) => w.length >= 2);
+  if (!words.length) return null;
+
+  // Tìm theo từ dài nhất (cụ thể nhất) trước
+  const sortedWords = [...words].sort((a, b) => b.length - a.length);
+  const searchWord = sortedWords[0];
+
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("category_id")
+    .eq("user_id", userId)
+    .eq("type", type)
+    .not("category_id", "is", null)
+    .ilike("description", `%${searchWord}%`)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error || !data?.length) return null;
+
+  // Đếm category_id xuất hiện nhiều nhất
+  const counts = new Map<string, number>();
+  for (const row of data) {
+    const cid = row.category_id as string;
+    counts.set(cid, (counts.get(cid) ?? 0) + 1);
+  }
+
+  // Sắp xếp theo số lần xuất hiện giảm dần
+  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  if (!sorted.length) return null;
+
+  // Chỉ tin tưởng nếu category đó được dùng ít nhất 1 lần
+  const topCategoryId = sorted[0][0];
+  return categories.find((c) => c.id === topCategoryId) ?? null;
+}
+
+// ── Tầng 2: Keyword mapping ────────────────────────────────
+
+// ── Tầng 2.5: LLM classification (OpenAI) ──────────────────
+
+async function matchByLLM(
+  description: string,
+  categories: Category[],
+): Promise<Category | null> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+
+  const categoryNames = categories.map((c) => c.name);
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        temperature: 0,
+        max_tokens: 50,
+        messages: [
+          {
+            role: "system",
+            content:
+              `Bạn là hệ thống phân loại giao dịch tài chính. ` +
+              `Cho mô tả giao dịch, hãy trả về TÊN DANH MỤC phù hợp nhất từ danh sách sau: ${categoryNames.join(", ")}. ` +
+              `Chỉ trả về đúng tên danh mục, không giải thích. ` +
+              `Nếu không chắc chắn, trả về "UNKNOWN".`,
+          },
+          {
+            role: "user",
+            content: description,
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const result = data.choices?.[0]?.message?.content?.trim();
+    if (!result || result === "UNKNOWN") return null;
+
+    // Tìm category match với kết quả LLM (case-insensitive)
+    const resultLower = result.toLowerCase();
+    return (
+      categories.find((c) => c.name.toLowerCase() === resultLower) ??
+      categories.find((c) => resultLower.includes(c.name.toLowerCase())) ??
+      null
+    );
+  } catch (err) {
+    console.error("[matchByLLM] OpenAI error:", err);
+    return null;
+  }
+}
+
+// ── Tầng 2 (keyword): Keyword mapping ──────────────────────
 
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   // Expense categories
@@ -148,6 +271,13 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
     "xôi",
     "hủ tiếu",
     "cháo",
+    "bim bim",
+    "kẹo",
+    "đồ ăn vặt",
+    "chip",
+    "bánh tráng",
+    "khô",
+    "mứt",
   ],
   "di chuyển": [
     "grab",
@@ -347,6 +477,20 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
     "commission",
     "tip",
     "quà",
+    "cho",
+    "tặng",
+    "biếu",
+    "người yêu cho",
+    "bạn cho",
+    "mẹ cho",
+    "bố cho",
+    "ba cho",
+    "má cho",
+    "anh cho",
+    "chị cho",
+    "được cho",
+    "lì xì",
+    "mừng",
   ],
 };
 
@@ -363,6 +507,96 @@ function matchByKeywords(
     if (found) return cat;
   }
   return null;
+}
+
+// ── Tầng 3: Fuzzy matching (typo / thiếu dấu / viết tắt) ──
+
+/**
+ * Bỏ dấu tiếng Việt để so sánh fuzzy.
+ * "cà phê" → "ca phe", "ăn uống" → "an uong"
+ */
+function removeDiacritics(str: string): string {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D");
+}
+
+/**
+ * Tính khoảng cách Levenshtein giữa 2 chuỗi.
+ * Dùng cho so sánh fuzzy ngắn (< 30 ký tự).
+ */
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+
+  const dp: number[][] = Array.from({ length: m + 1 }, () =>
+    Array(n + 1).fill(0),
+  );
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1, // deletion
+        dp[i][j - 1] + 1, // insertion
+        dp[i - 1][j - 1] + cost, // substitution
+      );
+    }
+  }
+  return dp[m][n];
+}
+
+function matchByFuzzy(
+  description: string,
+  categories: Category[],
+): Category | null {
+  const descNoDiacritics = removeDiacritics(description);
+  const descWords = descNoDiacritics.split(/\s+/).filter((w) => w.length >= 2);
+
+  let bestCat: Category | null = null;
+  let bestScore = Infinity;
+  // Threshold: cho phép sai lệch tối đa 30% chiều dài từ khóa, tối thiểu 1
+  const MAX_RATIO = 0.3;
+
+  for (const cat of categories) {
+    const catNameLower = cat.name.toLowerCase();
+    const keywords = CATEGORY_KEYWORDS[catNameLower];
+    if (!keywords) continue;
+
+    for (const kw of keywords) {
+      const kwNorm = removeDiacritics(kw.toLowerCase());
+      const maxDist = Math.max(1, Math.floor(kwNorm.length * MAX_RATIO));
+
+      // So sánh từng từ trong description với keyword
+      for (const word of descWords) {
+        // Chỉ so sánh nếu chiều dài tương đương (±50%)
+        if (Math.abs(word.length - kwNorm.length) > maxDist) continue;
+
+        const dist = levenshtein(word, kwNorm);
+        if (dist <= maxDist && dist < bestScore) {
+          bestScore = dist;
+          bestCat = cat;
+        }
+      }
+
+      // Cũng thử so sánh toàn bộ description (cho multi-word keywords)
+      if (kwNorm.includes(" ")) {
+        const dist = levenshtein(descNoDiacritics, kwNorm);
+        if (dist <= maxDist && dist < bestScore) {
+          bestScore = dist;
+          bestCat = cat;
+        }
+      }
+    }
+  }
+
+  return bestCat;
 }
 
 // ============================================================
