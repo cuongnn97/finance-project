@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { categorySchema, type CategoryFormValues } from "@/schemas";
@@ -41,6 +42,15 @@ export function CategoryForm({ open, onClose, category }: CategoryFormProps) {
       icon: category?.icon ?? "circle",
     },
   });
+
+  useEffect(() => {
+    reset({
+      name: category?.name ?? "",
+      type: category?.type ?? "expense",
+      color: category?.color ?? "#6366f1",
+      icon: category?.icon ?? "circle",
+    });
+  }, [category, reset]);
 
   const selectedColor = watch("color");
   const selectedIcon = watch("icon");

@@ -312,11 +312,101 @@ function parseAmount(token: string): number | null {
   }
 }
 
+// ── OpenAI-powered parser ────────────────────────────────────
+
+async function parseTransactionWithLLM(
+  text: string,
+): Promise<ParsedTransaction | null> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+
+  const today = format(new Date(), "yyyy-MM-dd");
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        temperature: 0,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: `Bạn là trình phân tích giao dịch tài chính cá nhân. Ngày hôm nay: ${today}.
+
+Từ tin nhắn của người dùng, trích xuất thông tin giao dịch và trả về JSON với đúng 4 trường sau:
+- "type": "income" hoặc "expense"
+- "amount": số tiền (số nguyên, đơn vị VND). Quy đổi: 100k=100000, 1.5tr=1500000, 1tr=1000000
+- "description": mô tả ngắn gọn, súc tích về giao dịch (chỉ giữ lại nội dung thực, bỏ từ chỉ hành động như "ăn", "mua", "chi"...)
+- "date": ngày giao dịch định dạng yyyy-MM-dd (mặc định hôm nay nếu không đề cập)
+
+Ví dụ:
+- "ăn bún đậu 100k" → {"type":"expense","amount":100000,"description":"bún đậu","date":"${today}"}
+- "cà phê 35k hôm qua" → {"type":"expense","amount":35000,"description":"cà phê","date":"<hôm qua>"}
+- "lương tháng 15tr" → {"type":"income","amount":15000000,"description":"lương tháng","date":"${today}"}
+- "mẹ cho 500k" → {"type":"income","amount":500000,"description":"mẹ cho","date":"${today}"}
+
+Nếu không tìm được số tiền hợp lệ, trả về {"error":"no_amount"}.`,
+          },
+          { role: "user", content: text },
+        ],
+      }),
+    });
+
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const raw_content = data.choices?.[0]?.message?.content?.trim();
+    if (!raw_content) return null;
+
+    const parsed = JSON.parse(raw_content) as {
+      error?: string;
+      type?: string;
+      amount?: number;
+      description?: string;
+      date?: string;
+    };
+
+    if (parsed.error || !parsed.amount || parsed.amount <= 0) return null;
+
+    const type: TransactionType =
+      parsed.type === "income" ? "income" : "expense";
+    const amount = Math.round(parsed.amount);
+    const description = parsed.description?.trim() || text.trim();
+    const date =
+      parsed.date && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date)
+        ? parsed.date
+        : format(new Date(), "yyyy-MM-dd");
+
+    return { type, amount, description, date, raw: text.trim() };
+  } catch (err) {
+    console.error("[parseTransactionWithLLM] error:", err);
+    return null;
+  }
+}
+
+// ── Regex-based fallback parser ──────────────────────────────
+
 /**
  * Phân tích tin nhắn dạng tự do thành giao dịch.
- * Trả về null nếu không tìm thấy số tiền hợp lệ.
+ * Thử OpenAI trước, fallback về regex nếu không có key hoặc lỗi.
  */
-export function parseTransaction(text: string): ParsedTransaction | null {
+export async function parseTransaction(
+  text: string,
+): Promise<ParsedTransaction | null> {
+  const llmResult = await parseTransactionWithLLM(text);
+  if (llmResult) return llmResult;
+
+  return parseTransactionRegex(text);
+}
+
+function parseTransactionRegex(text: string): ParsedTransaction | null {
   const raw = text.trim();
   if (!raw) return null;
 
@@ -387,21 +477,18 @@ export function parseTransaction(text: string): ParsedTransaction | null {
     // Default: expense
   }
 
-  // --- Build description (remove type-hint words) ---
+  // --- Build description (remove only functional/verb type-hint words, keep content nouns) ---
   const typeHintWords = new Set([
-    ...INCOME_KEYWORDS.filter((kw) => !kw.includes(" ")),
-    ...EXPENSE_KEYWORDS.filter((kw) => !kw.includes(" ")),
-    "on",
-    "for",
-    "at",
-    "the",
-    "a",
-    "an",
-    "cho",
-    "của",
-    "và",
-    "với",
-    "tiền",
+    // Vietnamese expense verbs/prefixes
+    "chi", "mua", "trả", "tiêu", "hết", "tốn", "ăn",
+    // Vietnamese income verbs/prefixes
+    "nhận", "thu", "bán", "được",
+    // English functional words
+    "spent", "bought", "buy", "purchase", "received",
+    "earn", "earned", "paid", "payment", "income", "expense",
+    // Prepositions / articles
+    "on", "for", "at", "the", "a", "an",
+    "cho", "của", "và", "với", "tiền",
   ]);
   const cleanDesc = descTokens
     .filter((t) => !typeHintWords.has(lower(t)))

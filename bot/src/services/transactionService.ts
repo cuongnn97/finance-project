@@ -503,7 +503,10 @@ function matchByKeywords(
     const keywords = CATEGORY_KEYWORDS[catNameLower];
     if (!keywords) continue;
 
-    const found = keywords.some((kw) => description.includes(kw));
+    const found = keywords.some((kw) => {
+      const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return new RegExp(`(^|\\s)${escaped}(\\s|$)`).test(description);
+    });
     if (found) return cat;
   }
   return null;
