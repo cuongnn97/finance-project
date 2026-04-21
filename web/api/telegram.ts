@@ -57,7 +57,7 @@ interface Transaction {
 }
 
 interface ParsedTransaction {
-  type: TransactionType;
+  forcedType: TransactionType | null; // set only by +/- prefix
   amount: number;
   description: string;
   date: string;
@@ -122,356 +122,108 @@ async function linkTelegramAccount(
 // Category helpers
 // ============================================================
 
-async function getCategoriesByType(
-  userId: string,
-  type: TransactionType,
-): Promise<Category[]> {
+async function getAllCategories(userId: string): Promise<Category[]> {
   const { data, error } = await supabase
     .from("categories")
     .select("*")
     .eq("user_id", userId)
-    .eq("type", type)
+    .order("type")
     .order("name");
   if (error) return [];
   return (data ?? []) as Category[];
 }
 
-const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  "ăn uống": [
-    "cà phê",
-    "cafe",
-    "coffee",
-    "trà sữa",
-    "boba",
-    "ăn",
-    "cơm",
-    "phở",
-    "bún",
-    "bánh mì",
-    "bánh",
-    "chè",
-    "kem",
-    "pizza",
-    "burger",
-    "gà",
-    "lẩu",
-    "nướng",
-    "sushi",
-    "đồ ăn",
-    "đồ uống",
-    "bia",
-    "rượu",
-    "nước",
-    "chợ",
-    "siêu thị",
-    "thực phẩm",
-    "food",
-    "lunch",
-    "dinner",
-    "breakfast",
-    "groceries",
-    "restaurant",
-    "quán",
-    "nhà hàng",
-    "buffet",
-    "snack",
-    "trái cây",
-    "rau",
-    "thịt",
-    "cá",
-    "sữa",
-    "mì",
-    "bắp",
-    "xôi",
-    "hủ tiếu",
-    "cháo",
-    "bim bim",
-    "kẹo",
-    "đồ ăn vặt",
-    "chip",
-    "bánh tráng",
-    "khô",
-    "mứt",
-  ],
-  "di chuyển": [
-    "grab",
-    "taxi",
-    "uber",
-    "gojek",
-    "be",
-    "xăng",
-    "đổ xăng",
-    "gửi xe",
-    "bãi xe",
-    "vé xe",
-    "xe buýt",
-    "bus",
-    "tàu",
-    "metro",
-    "máy bay",
-    "vé máy bay",
-    "toll",
-    "phí cầu đường",
-    "sửa xe",
-    "rửa xe",
-    "bảo dưỡng",
-    "parking",
-    "xe ôm",
-    "ship",
-    "giao hàng",
-    "vận chuyển",
-  ],
-  "nhà ở": [
-    "tiền nhà",
-    "thuê nhà",
-    "rent",
-    "điện",
-    "nước",
-    "internet",
-    "wifi",
-    "gas",
-    "chung cư",
-    "phí quản lý",
-    "sửa nhà",
-    "đồ gia dụng",
-    "nội thất",
-    "dọn nhà",
-    "giặt",
-    "giặt ủi",
-  ],
-  "giải trí": [
-    "phim",
-    "cinema",
-    "movie",
-    "netflix",
-    "spotify",
-    "youtube",
-    "game",
-    "karaoke",
-    "bar",
-    "club",
-    "concert",
-    "show",
-    "du lịch",
-    "travel",
-    "khách sạn",
-    "hotel",
-    "resort",
-    "vé",
-    "ticket",
-    "nhạc",
-    "music",
-    "sách",
-    "truyện",
-    "manga",
-  ],
-  "mua sắm": [
-    "quần áo",
-    "áo",
-    "quần",
-    "giày",
-    "dép",
-    "túi",
-    "balo",
-    "đồng hồ",
-    "trang sức",
-    "mỹ phẩm",
-    "son",
-    "kem chống nắng",
-    "nước hoa",
-    "shopping",
-    "shopee",
-    "lazada",
-    "tiki",
-    "amazon",
-    "online",
-    "phụ kiện",
-    "điện thoại",
-    "laptop",
-    "tai nghe",
-    "sạc",
-    "ốp lưng",
-    "đồ điện tử",
-    "máy tính",
-  ],
-  "sức khỏe": [
-    "thuốc",
-    "bệnh viện",
-    "khám",
-    "bác sĩ",
-    "nha khoa",
-    "răng",
-    "mắt",
-    "kính",
-    "gym",
-    "tập",
-    "yoga",
-    "vitamin",
-    "thực phẩm chức năng",
-    "bảo hiểm y tế",
-    "xét nghiệm",
-    "phẫu thuật",
-  ],
-  "giáo dục": [
-    "học phí",
-    "học",
-    "khóa học",
-    "course",
-    "sách",
-    "book",
-    "udemy",
-    "coursera",
-    "gia sư",
-    "lớp",
-    "trường",
-    "đào tạo",
-    "chứng chỉ",
-    "thi",
-    "exam",
-  ],
-  "hóa đơn": [
-    "hóa đơn",
-    "bill",
-    "thuế",
-    "phí",
-    "bảo hiểm",
-    "trả góp",
-    "subscription",
-    "đăng ký",
-    "gia hạn",
-    "phạt",
-    "nợ",
-    "điện thoại",
-    "sim",
-    "4g",
-    "5g",
-  ],
-  lương: ["lương", "salary", "wage", "pay"],
-  freelance: [
-    "freelance",
-    "dự án",
-    "project",
-    "client",
-    "khách hàng",
-    "hợp đồng",
-    "contract",
-    "thiết kế",
-    "design",
-    "code",
-    "dev",
-    "website",
-    "app",
-    "consulting",
-    "job",
-    "làm job",
-    "làm thêm",
-    "làm ngoài",
-    "job ngoài",
-    "chạy thêm",
-    "công việc",
-    "kiếm",
-  ],
-  "đầu tư": [
-    "cổ tức",
-    "dividend",
-    "lãi",
-    "interest",
-    "đầu tư",
-    "invest",
-    "chứng khoán",
-    "stock",
-    "crypto",
-    "bitcoin",
-    "tiết kiệm",
-  ],
-  "thu nhập khác": [
-    "thưởng",
-    "bonus",
-    "hoàn tiền",
-    "refund",
-    "bán",
-    "sold",
-    "sale",
-    "cho thuê",
-    "hoa hồng",
-    "commission",
-    "tip",
-    "quà",
-    "cho",
-    "tặng",
-    "biếu",
-    "người yêu cho",
-    "bạn cho",
-    "mẹ cho",
-    "bố cho",
-    "ba cho",
-    "má cho",
-    "anh cho",
-    "chị cho",
-    "được cho",
-    "lì xì",
-    "mừng",
-  ],
-};
+// ── Tầng 1: Lấy lịch sử giao dịch tương tự làm context cho OpenAI ──
 
-async function matchCategory(
-  userId: string,
-  type: TransactionType,
-  description: string,
-): Promise<Category | null> {
-  const categories = await getCategoriesByType(userId, type);
-  if (!categories.length) return null;
-  const lower = description.toLowerCase();
-
-  // Tầng 0: Exact name match
-  const exact = categories.find((c) => lower.includes(c.name.toLowerCase()));
-  if (exact) return exact;
-
-  // Tầng 1: History-based (học từ giao dịch cũ)
-  const historyMatch = await matchByHistory(userId, type, lower, categories);
-  if (historyMatch) return historyMatch;
-
-  // Tầng 2: Keyword match
-  for (const cat of categories) {
-    const keywords = CATEGORY_KEYWORDS[cat.name.toLowerCase()];
-    if (keywords?.some((kw) => lower.includes(kw))) return cat;
-  }
-
-  // Tầng 2.5: LLM classification (OpenAI)
-  const llmMatch = await matchByLLM(lower, categories);
-  if (llmMatch) return llmMatch;
-
-  // Tầng 3: Fuzzy match
-  const fuzzyMatch = matchByFuzzy(lower, categories);
-  if (fuzzyMatch) return fuzzyMatch;
-
-  // Tầng 4: Fallback
-  const fallbackNames =
-    type === "expense"
-      ? ["chi phí khác", "khác", "other"]
-      : ["thu nhập khác", "khác", "other"];
-  return (
-    categories.find((c) =>
-      fallbackNames.some((n) => c.name.toLowerCase().includes(n)),
-    ) ?? categories[0]
-  );
+interface HistoryEntry {
+  description: string;
+  type: TransactionType;
+  categoryName: string;
 }
 
-// ── Tầng 1: History-based matching ─────────────────────────
+async function getHistoryContext(
+  userId: string,
+  rawText: string,
+): Promise<HistoryEntry[]> {
+  if (!rawText || rawText.length < 2) return [];
+  const words = rawText.split(/\s+/).filter((w) => w.length >= 2);
+  if (!words.length) return [];
 
-// ── Tầng 2.5: LLM classification (OpenAI) ──────────────────
+  const searchWord = [...words].sort((a, b) => b.length - a.length)[0];
 
-async function matchByLLM(
-  description: string,
-  categories: Category[],
-): Promise<Category | null> {
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("description, type, categories(name)")
+    .eq("user_id", userId)
+    .not("category_id", "is", null)
+    .ilike("description", `%${searchWord}%`)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (error || !data?.length) return [];
+
+  return (data as Array<{ description: string; type: string; categories: { name: string } | null }>)
+    .map((row) => ({
+      description: row.description ?? "",
+      type: row.type as TransactionType,
+      categoryName: row.categories?.name ?? "",
+    }))
+    .filter((r) => r.categoryName);
+}
+
+// ── OpenAI: Phân loại type + category trong một lần gọi ────
+
+async function classifyTransaction(
+  rawText: string,
+  allCategories: Category[],
+  history: HistoryEntry[],
+  forcedType?: TransactionType,
+): Promise<{ type: TransactionType; category: Category | null }> {
+  const defaultType: TransactionType = forcedType ?? "expense";
+
+  const getFallback = (type: TransactionType): Category | null => {
+    const cats = allCategories.filter((c) => c.type === type);
+    const fallbackNames =
+      type === "expense"
+        ? ["chi phí khác", "khác", "other"]
+        : ["thu nhập khác", "khác", "other"];
+    return (
+      cats.find((c) =>
+        fallbackNames.some((n) => c.name.toLowerCase().includes(n)),
+      ) ??
+      cats[0] ??
+      null
+    );
+  };
+
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey) {
+    return { type: defaultType, category: getFallback(defaultType) };
+  }
 
-  const categoryList = categories.map((c) => c.name).join(", ");
+  const incomeList = allCategories
+    .filter((c) => c.type === "income")
+    .map((c) => c.name)
+    .join(", ");
+  const expenseList = allCategories
+    .filter((c) => c.type === "expense")
+    .map((c) => c.name)
+    .join(", ");
 
-  const type = categories[0]?.type ?? "expense";
-  const typeLabel = type === "income" ? "thu nhập" : "chi tiêu";
+  const historyLines =
+    history.length > 0
+      ? `\nLịch sử giao dịch tương tự của người dùng (dùng để tham khảo):\n${history
+          .slice(0, 5)
+          .map(
+            (h) =>
+              `- "${h.description}" → ${h.type === "income" ? "thu nhập" : "chi tiêu"}, danh mục: ${h.categoryName}`,
+          )
+          .join("\n")}`
+      : "";
+
+  const forcedNote = forcedType
+    ? `\nLưu ý bắt buộc: Người dùng đã chỉ định đây là giao dịch ${forcedType === "income" ? "THU NHẬP" : "CHI TIÊU"} — chỉ chọn danh mục trong nhóm đó.`
+    : "";
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -483,181 +235,78 @@ async function matchByLLM(
       body: JSON.stringify({
         model: "gpt-4o-mini",
         temperature: 0,
-        max_tokens: 30,
+        max_tokens: 60,
         messages: [
           {
             role: "system",
             content: [
               `Bạn là hệ thống phân loại giao dịch tài chính cá nhân tại Việt Nam.`,
-              `Đây là giao dịch loại: ${typeLabel}.`,
-              `Danh sách danh mục: [${categoryList}]`,
+              ``,
+              `Danh mục THU NHẬP: [${incomeList}]`,
+              `Danh mục CHI TIÊU: [${expenseList}]`,
+              historyLines,
+              forcedNote,
               ``,
               `Quy tắc:`,
-              `- Chỉ trả về ĐÚNG MỘT tên danh mục từ danh sách trên.`,
-              `- Không giải thích, không thêm ký tự nào khác.`,
-              `- Hiểu ngữ cảnh tiếng Việt tự nhiên, bao gồm tiếng lóng và viết tắt.`,
-              `- Nếu không chắc chắn, trả về "UNKNOWN".`,
+              `- Xác định loại giao dịch (thu nhập / chi tiêu) dựa trên ngữ cảnh tiếng Việt.`,
+              `- Chú ý thứ tự từ: "mẹ cho" = được nhận tiền (thu nhập), "cho mẹ" = đưa tiền đi (chi tiêu).`,
+              `- "nhận", "được cho", "lì xì", "lương", "bán được" → thu nhập.`,
+              `- "mua", "trả", "chi", "tiêu", "đổ xăng", "ăn" → chi tiêu.`,
+              `- Chọn đúng danh mục từ nhóm tương ứng với loại giao dịch đã xác định.`,
+              `- Ưu tiên tham khảo lịch sử người dùng nếu có.`,
               ``,
-              `Ví dụ (chi tiêu):`,
-              `"đi ăn với bồ" → Ăn uống`,
-              `"đổ xăng xe" → Di chuyển`,
-              `"mua bim bim" → Ăn uống`,
-              `"cắt tóc" → Mua sắm`,
-              `"tiền trọ tháng 4" → Nhà ở`,
-              `"xem phim rạp" → Giải trí`,
-              `"mua thuốc cảm" → Sức khỏe`,
-              `"đóng học phí" → Giáo dục`,
-              `"trả tiền điện" → Hóa đơn`,
-              ``,
-              `Ví dụ (thu nhập):`,
-              `"làm job ngoài" → Freelance`,
-              `"lương tháng 4" → Lương`,
-              `"người yêu cho" → Thu nhập khác`,
-              `"lãi tiết kiệm" → Đầu tư`,
+              `Trả về JSON: {"type": "income" | "expense", "category": "<tên danh mục>"}`,
+              `Chỉ trả về JSON, không giải thích thêm.`,
             ].join("\n"),
           },
           {
             role: "user",
-            content: description,
+            content: rawText,
           },
         ],
       }),
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      return { type: defaultType, category: getFallback(defaultType) };
+    }
 
     const data = (await response.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
     };
-    const result = data.choices?.[0]?.message?.content?.trim();
-    if (!result || result === "UNKNOWN") return null;
+    const content = data.choices?.[0]?.message?.content?.trim();
+    if (!content) return { type: defaultType, category: getFallback(defaultType) };
 
-    // Tìm category match với kết quả LLM (exact → partial)
-    const resultLower = result.toLowerCase();
-    return (
-      categories.find((c) => c.name.toLowerCase() === resultLower) ??
-      categories.find((c) => resultLower.includes(c.name.toLowerCase())) ??
-      null
-    );
+    const parsed = JSON.parse(content) as {
+      type?: string;
+      category?: string;
+    };
+
+    const type: TransactionType =
+      forcedType ?? (parsed.type === "income" ? "income" : "expense");
+    const categoryName = parsed.category?.trim() ?? "";
+
+    const cats = allCategories.filter((c) => c.type === type);
+    const nameLower = categoryName.toLowerCase();
+    const matched =
+      cats.find((c) => c.name.toLowerCase() === nameLower) ??
+      cats.find((c) => nameLower.includes(c.name.toLowerCase())) ??
+      null;
+
+    return { type, category: matched ?? getFallback(type) };
   } catch {
-    return null;
+    return { type: defaultType, category: getFallback(defaultType) };
   }
-}
-
-// ── Tầng 1 (history): History-based matching ───────────────
-
-async function matchByHistory(
-  userId: string,
-  type: TransactionType,
-  description: string,
-  categories: Category[],
-): Promise<Category | null> {
-  if (!description || description.length < 2) return null;
-  const words = description.split(/\s+/).filter((w) => w.length >= 2);
-  if (!words.length) return null;
-
-  const searchWord = [...words].sort((a, b) => b.length - a.length)[0];
-
-  const { data, error } = await supabase
-    .from("transactions")
-    .select("category_id")
-    .eq("user_id", userId)
-    .eq("type", type)
-    .not("category_id", "is", null)
-    .ilike("description", `%${searchWord}%`)
-    .order("created_at", { ascending: false })
-    .limit(20);
-
-  if (error || !data?.length) return null;
-
-  const counts = new Map<string, number>();
-  for (const row of data) {
-    const cid = row.category_id as string;
-    counts.set(cid, (counts.get(cid) ?? 0) + 1);
-  }
-
-  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-  if (!sorted.length) return null;
-
-  return categories.find((c) => c.id === sorted[0][0]) ?? null;
-}
-
-// ── Tầng 3: Fuzzy matching ─────────────────────────────────
-
-function removeDiacritics(str: string): string {
-  return str
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "D");
-}
-
-function levenshtein(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
-  if (m === 0) return n;
-  if (n === 0) return m;
-  const dp: number[][] = Array.from({ length: m + 1 }, () =>
-    Array(n + 1).fill(0),
-  );
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(
-        dp[i - 1][j] + 1,
-        dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + cost,
-      );
-    }
-  }
-  return dp[m][n];
-}
-
-function matchByFuzzy(
-  description: string,
-  categories: Category[],
-): Category | null {
-  const descNoDiacritics = removeDiacritics(description);
-  const descWords = descNoDiacritics.split(/\s+/).filter((w) => w.length >= 2);
-  let bestCat: Category | null = null;
-  let bestScore = Infinity;
-  const MAX_RATIO = 0.3;
-
-  for (const cat of categories) {
-    const keywords = CATEGORY_KEYWORDS[cat.name.toLowerCase()];
-    if (!keywords) continue;
-    for (const kw of keywords) {
-      const kwNorm = removeDiacritics(kw.toLowerCase());
-      const maxDist = Math.max(1, Math.floor(kwNorm.length * MAX_RATIO));
-      for (const word of descWords) {
-        if (Math.abs(word.length - kwNorm.length) > maxDist) continue;
-        const dist = levenshtein(word, kwNorm);
-        if (dist <= maxDist && dist < bestScore) {
-          bestScore = dist;
-          bestCat = cat;
-        }
-      }
-      if (kwNorm.includes(" ")) {
-        const dist = levenshtein(descNoDiacritics, kwNorm);
-        if (dist <= maxDist && dist < bestScore) {
-          bestScore = dist;
-          bestCat = cat;
-        }
-      }
-    }
-  }
-  return bestCat;
 }
 
 // ============================================================
-// Transaction helpers
+// Transaction helpers (DB)
 // ============================================================
 
 async function createTransaction(
   profile: Profile,
   parsed: ParsedTransaction,
+  type: TransactionType,
   categoryId: string | null,
 ): Promise<Transaction> {
   const { data, error } = await supabase
@@ -665,7 +314,7 @@ async function createTransaction(
     .insert({
       user_id: profile.id,
       category_id: categoryId,
-      type: parsed.type,
+      type,
       amount: parsed.amount,
       description: parsed.description,
       date: parsed.date,
@@ -713,139 +362,8 @@ async function getRecentTransactions(
 }
 
 // ============================================================
-// Parser (Vietnamese + English)
+// Parser (Vietnamese + English) — chỉ parse số tiền + ngày
 // ============================================================
-
-const INCOME_KW = [
-  "lương",
-  "thu nhập",
-  "nhận",
-  "thưởng",
-  "cổ tức",
-  "hoàn tiền",
-  "chuyển khoản",
-  "bán",
-  "hoa hồng",
-  "tiền lãi",
-  "trợ cấp",
-  "tiền thưởng",
-  "thu",
-  "được trả",
-  "cho",
-  "tặng",
-  "biếu",
-  "gửi cho",
-  "đưa cho",
-  "người yêu cho",
-  "bạn cho",
-  "mẹ cho",
-  "bố cho",
-  "ba cho",
-  "má cho",
-  "làm job",
-  "làm thêm",
-  "làm ngoài",
-  "job ngoài",
-  "chạy thêm",
-  "kiếm",
-  "kiếm được",
-  "thu được",
-  "công việc",
-  "dự án",
-  "project",
-  "salary",
-  "wage",
-  "freelance",
-  "payment",
-  "paid",
-  "received",
-  "income",
-  "earn",
-  "earned",
-  "bonus",
-  "dividend",
-  "refund",
-  "transfer",
-  "invoice",
-  "client",
-  "sold",
-  "sale",
-  "deposit",
-];
-
-const EXPENSE_KW = [
-  "chi",
-  "mua",
-  "trả",
-  "tiêu",
-  "thanh toán",
-  "hết",
-  "tốn",
-  "cà phê",
-  "cafe",
-  "ăn",
-  "ăn trưa",
-  "ăn tối",
-  "ăn sáng",
-  "cơm",
-  "phở",
-  "bún",
-  "trà sữa",
-  "đồ uống",
-  "chợ",
-  "siêu thị",
-  "bim bim",
-  "snack",
-  "kẹo",
-  "bánh",
-  "đồ ăn vặt",
-  "taxi",
-  "grab",
-  "xăng",
-  "gửi xe",
-  "nhà",
-  "tiền nhà",
-  "điện",
-  "nước",
-  "internet",
-  "điện thoại",
-  "thuê",
-  "hóa đơn",
-  "quần áo",
-  "giày",
-  "phim",
-  "game",
-  "spotify",
-  "netflix",
-  "thuốc",
-  "bệnh viện",
-  "khám",
-  "học phí",
-  "sách",
-  "spent",
-  "bought",
-  "buy",
-  "purchase",
-  "expense",
-  "food",
-  "coffee",
-  "lunch",
-  "dinner",
-  "breakfast",
-  "groceries",
-  "taxi",
-  "uber",
-  "gas",
-  "rent",
-  "bill",
-  "utility",
-  "subscription",
-  "shopping",
-  "clothes",
-  "movie",
-  "cinema",
-  "ticket",
-];
 
 function parseAmount(token: string): number | null {
   const cleaned = token.replace(/[,$€£₹đ]/gi, "").trim();
@@ -887,14 +405,15 @@ function parseTransaction(text: string): ParsedTransaction | null {
   if (!raw) return null;
   const tokens = raw.replace(/\s+/g, " ").split(" ");
 
-  let forceType: TransactionType | null = null;
+  // Chỉ detect type từ prefix +/-; loại giao dịch thực sự do OpenAI quyết định
+  let forcedType: TransactionType | null = null;
   const workTokens = [...tokens];
   if (workTokens[0]?.startsWith("+")) {
-    forceType = "income";
+    forcedType = "income";
     workTokens[0] = workTokens[0].slice(1);
     if (!workTokens[0]) workTokens.shift();
   } else if (workTokens[0]?.startsWith("-")) {
-    forceType = "expense";
+    forcedType = "expense";
     workTokens[0] = workTokens[0].slice(1);
     if (!workTokens[0]) workTokens.shift();
   }
@@ -959,51 +478,14 @@ function parseTransaction(text: string): ParsedTransaction | null {
   }
   if (amount === null) return null;
 
+  // Description = toàn bộ text còn lại sau khi bỏ số tiền và ngày
   const descTokens = remaining.filter((_, i) => !amountIdxs.includes(i));
-  const descLower = descTokens.map((s) => s.toLowerCase());
-  const fullDesc = descLower.join(" ");
-
-  let type: TransactionType = "expense";
-  if (forceType) {
-    type = forceType;
-  } else {
-    const hasIncome = INCOME_KW.some((kw) =>
-      kw.includes(" ")
-        ? fullDesc.includes(kw)
-        : descLower.some((t) => t.includes(kw)),
-    );
-    const hasExpense = EXPENSE_KW.some((kw) =>
-      kw.includes(" ")
-        ? fullDesc.includes(kw)
-        : descLower.some((t) => t.includes(kw)),
-    );
-    if (hasIncome && !hasExpense) type = "income";
-  }
-
-  const hintWords = new Set([
-    ...INCOME_KW.filter((kw) => !kw.includes(" ")),
-    ...EXPENSE_KW.filter((kw) => !kw.includes(" ")),
-    "on",
-    "for",
-    "at",
-    "the",
-    "a",
-    "an",
-    "cho",
-    "của",
-    "và",
-    "với",
-    "tiền",
-  ]);
-  const cleanDesc = descTokens
-    .filter((t) => !hintWords.has(t.toLowerCase()))
-    .join(" ")
-    .trim();
+  const description = descTokens.join(" ").trim();
 
   return {
-    type,
+    forcedType,
     amount,
-    description: cleanDesc || descTokens.join(" ").trim() || raw,
+    description: description || raw,
     date,
     raw,
   };
@@ -1228,16 +710,24 @@ bot.on("text", async (ctx: Context) => {
     return;
   }
 
-  const category = await matchCategory(
-    profile.id,
-    parsed.type,
-    parsed.description,
+  // Lấy categories + lịch sử, rồi phân loại bằng OpenAI
+  const [allCategories, history] = await Promise.all([
+    getAllCategories(profile.id),
+    getHistoryContext(profile.id, parsed.raw),
+  ]);
+  const { type, category } = await classifyTransaction(
+    parsed.raw,
+    allCategories,
+    history,
+    parsed.forcedType ?? undefined,
   );
+
   let transaction: Transaction;
   try {
     transaction = await createTransaction(
       profile,
       parsed,
+      type,
       category?.id ?? null,
     );
   } catch {
@@ -1246,13 +736,24 @@ bot.on("text", async (ctx: Context) => {
   }
 
   const currency = profile.currency ?? "VND";
-  const typeEmoji = parsed.type === "income" ? "📈" : "📉";
-  const typeLabel = parsed.type === "income" ? "Thu nhập" : "Chi tiêu";
-  const sign = parsed.type === "income" ? "+" : "-";
+  const typeEmoji = type === "income" ? "📈" : "📉";
+  const typeLabel = type === "income" ? "Thu nhập" : "Chi tiêu";
+  const sign = type === "income" ? "+" : "-";
   const dateLabel = format(new Date(parsed.date + "T00:00:00"), "dd/MM/yyyy");
 
+  const balance = await getMonthlyBalance(profile.id);
+  const balanceEmoji = balance.balance >= 0 ? "🟢" : "🔴";
+
   await ctx.reply(
-    `✅ *${typeLabel} đã ghi nhận!*\n\n${typeEmoji} *Số tiền:* ${sign}${fmt(parsed.amount, currency)}\n📝 *Mô tả:* ${parsed.description}\n🏷️ *Danh mục:* ${category?.name ?? "Chưa phân loại"}\n📅 *Ngày:* ${dateLabel}\n\n_ID: ${transaction.id.slice(0, 8)}…_`,
+    `✅ *${typeLabel} đã ghi nhận!*\n\n` +
+    `${typeEmoji} *Số tiền:* ${sign}${fmt(parsed.amount, currency)}\n` +
+    `📝 *Mô tả:* ${parsed.description || text}\n` +
+    `🏷️ *Danh mục:* ${category?.name ?? "Chưa phân loại"}\n` +
+    `📅 *Ngày:* ${dateLabel}\n\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `${balanceEmoji} *Số dư tháng này:* ${fmt(balance.balance, currency)}\n` +
+    `_(Thu: ${fmt(balance.total_income, currency)} · Chi: ${fmt(balance.total_expense, currency)})_\n\n` +
+    `_ID: ${transaction.id.slice(0, 8)}…_`,
     { parse_mode: "Markdown" },
   );
 });
