@@ -38,7 +38,7 @@ export async function handleMessage(ctx: Context) {
   }
 
   // Phân tích giao dịch
-  const parsed = parseTransaction(text);
+  const parsed = await parseTransaction(text);
   if (!parsed) {
     await ctx.reply(
       "🤔 Tôi không thể phân tích tin nhắn này thành giao dịch.\n\n" +

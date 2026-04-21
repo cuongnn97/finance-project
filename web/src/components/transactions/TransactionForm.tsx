@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { transactionSchema, type TransactionFormValues } from "@/schemas";
@@ -46,6 +47,16 @@ export function TransactionForm({
       date: transaction?.date ?? toDateInputValue(),
     },
   });
+
+  useEffect(() => {
+    reset({
+      type: transaction?.type ?? "expense",
+      category_id: transaction?.category_id ?? null,
+      amount: transaction?.amount,
+      description: transaction?.description ?? "",
+      date: transaction?.date ?? toDateInputValue(),
+    });
+  }, [transaction, reset]);
 
   const selectedType = watch("type");
   const filteredCategories = categories.filter((c) => c.type === selectedType);

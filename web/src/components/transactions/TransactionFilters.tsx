@@ -109,9 +109,19 @@ export function TransactionFiltersBar({ filters, onChange, onReset }: Props) {
 
         {/* Khoảng ngày */}
         <div className="flex items-center gap-2">
-          <Input type="date" {...register("date_from")} className="w-36" />
+          <Input
+            type="date"
+            placeholder="Từ ngày"
+            {...register("date_from")}
+            className="w-36"
+          />
           <span className="text-sm text-gray-400">đến</span>
-          <Input type="date" {...register("date_to")} className="w-36" />
+          <Input
+            type="date"
+            placeholder="Đến ngày"
+            {...register("date_to")}
+            className="w-36"
+          />
         </div>
 
         {/* Xóa bộ lọc */}
